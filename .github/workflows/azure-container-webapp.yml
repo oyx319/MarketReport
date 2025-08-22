@@ -71,17 +71,38 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: 'Development'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+      name: 'Production'
+      url: http://49.51.205.118
 
     steps:
       - name: Lowercase the repo name and username
         run: echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
 
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v2
+      - name: Deploy to Tencent Cloud Server
+        uses: appleboy/ssh-action@v1.0.0
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          images: 'ghcr.io/${{ env.REPO }}:${{ github.sha }}'
+          host: 49.51.205.118
+          username: ${{ secrets.TENCENT_SERVER_USERNAME }}
+          key: ${{ secrets.TENCENT_SERVER_SSH_KEY }}
+          script: |
+            # 登录到GitHub Container Registry
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # 停止并删除旧容器（如果存在）
+            docker stop marketreport || true
+            docker rm marketreport || true
+            
+            # 拉取最新镜像
+            docker pull ghcr.io/${{ env.REPO }}:${{ github.sha }}
+            
+            # 运行新容器
+            docker run -d \
+              --name marketreport \
+              -p 3000:3000 \
+              --restart unless-stopped \
+              ghcr.io/${{ env.REPO }}:${{ github.sha }}
+            
+            # 清理旧镜像
+            docker image prune -f
+            # 清理旧容器
+            docker container prune -f
