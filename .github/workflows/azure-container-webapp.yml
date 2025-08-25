@@ -73,7 +73,7 @@ jobs:
             docker run -d \
               --name marketreport \
               -p 3000:3000 \
-              --env-file .env \
+              --env-file /app/.env \
               --restart unless-stopped \
               ghcr.io/${{ env.REPO }}:${{ github.sha }}
             
