@@ -5,6 +5,7 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 COPY client/package*.json ./client/
+copy .env.example ./.env
 
 # Install dependencies
 RUN npm install --production
